@@ -1,105 +1,128 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import headphones from "../assets/headphones.jpeg";
-import smartWatch from "../assets/smart-watch.jpeg";
-import gamingMouse from "../assets/gaming-mouse.jpeg";
-import machanicalKeyboard from "../assets/mechanical-keyboard.jpeg";
-import speaker from "../assets/bluetooth-speaker.jpeg";
-import monitor from "../assets/4k-monitor.jpeg";
-import phoneCharger from "../assets/phone-charger.jpeg";
-import DSLRCamera from "../assets/dslr-camera.jpeg";
-import vrHeadset from "../assets/vr-headset.jpeg";
 import Messages from "../components/Messages";
 import Ratings from "../components/Ratings";
+import Header from "../components/Header";
 
-const products = [
+interface ProductTypes {
+  id: number;
+  name: string;
+  description: string;
+  price: string;
+  rating: number;
+  image_url: string;
+}
+
+interface ChatTypes {
+  id: number;
+  sender: "ai" | "user";
+  message: string;
+}
+
+const INITIAL_CHAT: ChatTypes[] = [
   {
     id: 1,
-    title: "Wireless Headphones",
-    description: "Premium noise-cancelling over-ear headphones.",
-    price: "$129",
-    rating: 4.5,
-    image: headphones,
+    sender: "ai",
+    message: "👋 Hello! How can I help you today?",
   },
   {
     id: 2,
-    title: "Smart Watch",
-    description: "Track fitness, heart rate, and notifications.",
-    price: "$199",
-    rating: 4.2,
-    image: smartWatch,
+    sender: "user",
+    message: "Show me best gaming accessories.",
   },
   {
     id: 3,
-    title: "Gaming Mouse",
-    description: "Ergonomic RGB gaming mouse with precision tracking.",
-    price: "$59",
-    rating: 4.7,
-    image: gamingMouse,
+    sender: "ai",
+    message: "I recommend the Gaming Mouse and Mechanical Keyboard.",
   },
   {
     id: 4,
-    title: "Mechanical Keyboard",
-    description: "Tactile mechanical keyboard with RGB lighting.",
-    price: "$89",
-    rating: 4.6,
-    image: machanicalKeyboard,
+    sender: "user",
+    message: "Add them to my cart.",
   },
   {
     id: 5,
-    title: "Bluetooth Speaker",
-    description: "Portable speaker with deep bass and waterproof design.",
-    price: "$79",
-    rating: 4.3,
-    image: speaker,
-  },
-  {
-    id: 6,
-    title: "Laptop Stand",
-    description: "Adjustable aluminum stand for better posture.",
-    price: "$39",
-    rating: 4.1,
-    image: headphones,
-  },
-  {
-    id: 7,
-    title: "4K Monitor",
-    description: "Ultra HD display for work and gaming.",
-    price: "$349",
-    rating: 4.8,
-    image: monitor,
-  },
-  {
-    id: 8,
-    title: "Phone Charger",
-    description: "Fast charging USB-C wall adapter.",
-    price: "$29",
-    rating: 4.0,
-    image: phoneCharger,
-  },
-  {
-    id: 9,
-    title: "DSLR Camera",
-    description: "Professional camera with high-resolution sensor.",
-    price: "$899",
-    rating: 4.9,
-    image: DSLRCamera,
-  },
-  {
-    id: 10,
-    title: "VR Headset",
-    description: "Immersive virtual reality gaming experience.",
-    price: "$499",
-    rating: 4.6,
-    image: vrHeadset,
+    sender: "ai",
+    message: "Done ✅ Both items have been added.",
   },
 ];
 
+const SESSION_ID = Date.now();
+
 export default function Products() {
+  const [products, setProducts] = useState<ProductTypes[]>([]);
   const [cartCount, setCartCount] = useState(0);
+  const [msgValue, setMsgValue] = useState<string>("");
+  const [chat, setChat] = useState<ChatTypes[]>(INITIAL_CHAT);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await fetch("http://localhost:8000/products");
+        const json = await res.json();
+        setProducts(json);
+      } catch (err) {
+        console.error("API error:", err);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   const addToCart = () => {
     setCartCount(cartCount + 1);
+  };
+
+  const onSend = async (e: React.SyntheticEvent) => {
+    setLoading(true);
+    e.preventDefault();
+
+    const message = msgValue;
+    setMsgValue("");
+
+    const userId = Date.now();
+
+    setChat((prev) => [...prev, { id: userId, sender: "user", message }]);
+
+    const aiId = Date.now() + 1;
+
+    setChat((prev) => [...prev, { id: aiId, sender: "ai", message: "" }]);
+
+    try {
+      const res = await fetch("http://localhost:8000/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message,
+          model: "llama3",
+          session_id: SESSION_ID,
+        }),
+      });
+
+      const reader = res.body?.getReader();
+      if (!reader) return;
+
+      const decoder = new TextDecoder();
+      let fullText = "";
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        fullText += decoder.decode(value, { stream: true });
+
+        setChat((prev) =>
+          prev.map((m) => (m.id === aiId ? { ...m, message: fullText } : m)),
+        );
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -113,39 +136,32 @@ export default function Products() {
           </p>
         </div>
 
-        <Messages />
+        <Messages chat={chat} />
 
         <div className="p-4 border-t border-gray-700">
-          <div className="flex items-center gap-2">
+          <form className="flex items-center gap-2">
             <input
+              value={msgValue}
+              onChange={(e) => setMsgValue(e.target.value)}
               type="text"
               placeholder="Type a message..."
               className="flex-1 rounded-lg bg-gray-800 px-4 py-2 text-sm outline-none"
             />
-            <button className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg">
+            <button
+              onClick={onSend}
+              type="submit"
+              className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg"
+            >
               Send
             </button>
-          </div>
+          </form>
         </div>
       </aside>
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="bg-white shadow-sm px-8 py-5 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800">
-              Shopping Dashboard
-            </h1>
-            <p className="text-gray-500 text-sm mt-1">
-              Explore trending products
-            </p>
-          </div>
-
-          <div className="bg-blue-600 text-white px-5 py-3 rounded-xl shadow">
-            <span className="font-semibold">Orders:</span> {cartCount}
-          </div>
-        </header>
+        <Header cartCount={cartCount} />
 
         {/* Products Grid */}
         <section className="flex-1 overflow-y-auto p-8">
@@ -156,15 +172,15 @@ export default function Products() {
                 className="bg-white rounded-2xl shadow hover:shadow-lg transition overflow-hidden"
               >
                 <img
-                  src={product.image}
-                  alt={product.title}
+                  src={`http://localhost:8000/${product.image_url}`}
+                  alt={product.name}
                   className="h-52 w-full object-cover"
                 />
 
                 <div className="p-5">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-bold text-gray-800">
-                      {product.title}
+                      {product.name}
                     </h3>
                     <span className="text-blue-600 font-semibold">
                       {product.price}

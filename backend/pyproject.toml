@@ -10,5 +10,7 @@ dependencies = [
     "langchain-core>=1.4.0",
     "langchain-ollama>=1.1.0",
     "pydantic>=2.13.4",
+    "python-multipart>=0.0.29",
+    "sqlalchemy>=2.0.50",
     "uvicorn>=0.48.0",
 ]

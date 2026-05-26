@@ -1,4 +1,6 @@
+import { useEffect, useRef } from "react";
 import { Bot, User } from "lucide-react";
+import TypingIndicator from "../../common/TypingIndicator";
 
 const messages = [
   {
@@ -28,10 +30,26 @@ const messages = [
   },
 ];
 
-const Messages = () => {
+interface ChatTypes {
+  id: number;
+  sender: "ai" | "user";
+  message: string;
+}
+
+interface MessagesPropTypes {
+  chat: ChatTypes[];
+}
+
+const Messages = ({ chat }: MessagesPropTypes) => {
+  const bottomRef = useRef<HTMLDivElement | null>(null);
+  
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chat]);
+
   return (
     <div className="flex-1 overflow-y-auto p-4 space-y-5">
-      {messages.map((message) => (
+      {chat.map((message) => (
         <div
           key={message.id}
           className={`flex items-end gap-2 ${
@@ -56,7 +74,13 @@ const Messages = () => {
             <p className="text-xs opacity-70 mb-1">
               {message.sender === "user" ? "You" : "AI Assistant"}
             </p>
-            {message.text}
+            {/* {message.message} */}
+
+            {message.sender === "ai" && !message.message ? (
+              <TypingIndicator />
+            ) : (
+              message.message
+            )}
           </div>
 
           {/* USER ICON (RIGHT) */}
@@ -67,6 +91,9 @@ const Messages = () => {
           )}
         </div>
       ))}
+
+      {/* 👇 IMPORTANT: scroll anchor */}
+      <div ref={bottomRef} />
     </div>
   );
 };
