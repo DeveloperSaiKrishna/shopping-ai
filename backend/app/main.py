@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routes import chat_route, product_route
+from app.routes import chat_route, product_route, agent_route
 
 from fastapi.staticfiles import StaticFiles
 
@@ -12,6 +12,7 @@ app = FastAPI()
 
 app.include_router(chat_route.router)
 app.include_router(product_route.router)
+app.include_router(agent_route.router)
 
 origins = [
     "http://localhost:5173",

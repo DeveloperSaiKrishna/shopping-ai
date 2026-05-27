@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Bot, User } from "lucide-react";
+import { Bot, BotMessageSquare, User } from "lucide-react";
 import TypingIndicator from "../../common/TypingIndicator";
 
 const messages = [
@@ -42,13 +42,16 @@ interface MessagesPropTypes {
 
 const Messages = ({ chat }: MessagesPropTypes) => {
   const bottomRef = useRef<HTMLDivElement | null>(null);
-  
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chat]);
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-5">
+    <div className="flex-1 overflow-y-auto p-4 space-y-5 relative">
+      <div className="absolute top-[40%] left-[40%]">
+        {!chat.length && <BotMessageSquare size={80} opacity={0.2} />}
+      </div>
       {chat.map((message) => (
         <div
           key={message.id}

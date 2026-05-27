@@ -53,7 +53,7 @@ export default function Products() {
   const [products, setProducts] = useState<ProductTypes[]>([]);
   const [cartCount, setCartCount] = useState(0);
   const [msgValue, setMsgValue] = useState<string>("");
-  const [chat, setChat] = useState<ChatTypes[]>(INITIAL_CHAT);
+  const [chat, setChat] = useState<ChatTypes[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -90,14 +90,14 @@ export default function Products() {
     setChat((prev) => [...prev, { id: aiId, sender: "ai", message: "" }]);
 
     try {
-      const res = await fetch("http://localhost:8000/chat", {
+      const res = await fetch("http://localhost:8000/agent", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           message,
-          model: "llama3",
+          model: "qwen2.5:7b",
           session_id: SESSION_ID,
         }),
       });
